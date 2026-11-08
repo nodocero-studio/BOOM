@@ -3,33 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detector de Texto IA</title>
+    <title>Neural AI Detector</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Detector de Texto IA</h1>
-            <p>Analiza si un texto ha sido generado por Inteligencia Artificial de forma offline.</p>
+    <!-- Fondo de rejilla -->
+    <div class="grid-background"></div>
+    
+    <div class="hud-container">
+        <!-- Cabecera HUD -->
+        <header class="hud-header">
+            <div class="status-indicator">
+                <span class="pulse-dot"></span> SYS.ONLINE
+            </div>
+            <h1 class="glitch-text" data-text="NEURAL TEXT ANALYZER">NEURAL TEXT ANALYZER</h1>
+            <div class="version-info">v.2.0.4 // OFFLINE_MODE</div>
         </header>
 
-        <main class="layout">
-            <section class="input-section">
-                <textarea id="text-input" placeholder="Pega tu texto aquí (mínimo 50 caracteres)..."></textarea>
-                <button id="analyze-btn">Analizar Texto</button>
-                <p id="error-message" class="error hidden"></p>
+        <main class="hud-layout">
+            <!-- Panel de Entrada -->
+            <section class="panel input-panel">
+                <div class="panel-header">
+                    <span>> INPUT_DATA</span>
+                </div>
+                <div class="textarea-wrapper">
+                    <textarea id="text-input" placeholder="Inicializando escáner de texto... Esperando entrada de datos (mínimo 50 caracteres)." spellcheck="false"></textarea>
+                    <div class="scan-line"></div>
+                </div>
+                <button id="analyze-btn" class="cyber-button">
+                    <span class="btn-glitch">EJECUTAR ANÁLISIS</span>
+                    <div class="btn-bg"></div>
+                </button>
+                <p id="error-message" class="error hidden">[!] ERROR: DATOS INSUFICIENTES</p>
             </section>
 
-            <section id="results-section" class="results-section hidden">
+            <!-- Panel de Resultados -->
+            <section id="results-section" class="panel results-panel hidden">
+                <div class="panel-header">
+                    <span>> ANALYSIS_RESULT</span>
+                </div>
+                
                 <div class="gauge-container">
-                    <!-- Velocímetro SVG -->
+                    <!-- Velocímetro Táctico -->
                     <svg viewBox="0 0 200 120" class="gauge">
                         <!-- Fondo del arco -->
-                        <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#2a2a2a" stroke-width="20" stroke-linecap="round"/>
+                        <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(0, 240, 255, 0.1)" stroke-width="15" stroke-linecap="round"/>
                         <!-- Arco de progreso -->
-                        <path id="gauge-progress" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#4CAF50" stroke-width="20" stroke-linecap="round" stroke-dasharray="251.32" stroke-dashoffset="251.32"/>
-                        <!-- Marcas (Ticks) -->
-                        <g stroke="#555" stroke-width="2">
+                        <path id="gauge-progress" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="var(--accent)" stroke-width="15" stroke-linecap="round" stroke-dasharray="251.32" stroke-dashoffset="251.32"/>
+                        
+                        <!-- Marcas tácticas -->
+                        <g stroke="rgba(255,255,255,0.2)" stroke-width="2">
                             <line x1="20" y1="100" x2="25" y2="100" />
                             <line x1="33" y1="55" x2="37" y2="58" />
                             <line x1="60" y1="25" x2="62" y2="29" />
@@ -38,29 +61,26 @@
                             <line x1="167" y1="55" x2="163" y2="58" />
                             <line x1="180" y1="100" x2="175" y2="100" />
                         </g>
-                        <!-- Textos del velocímetro -->
-                        <g fill="#888" font-size="10" text-anchor="middle" font-family="sans-serif">
-                            <text x="20" y="115">0</text>
-                            <text x="100" y="15">50</text>
-                            <text x="180" y="115">100</text>
-                        </g>
+
                         <!-- Aguja -->
                         <g id="gauge-needle" transform="rotate(-90, 100, 100)">
-                            <polygon points="100,25 96,100 104,100" fill="#fff" />
+                            <polygon points="100,25 97,100 103,100" fill="var(--accent)" />
+                            <!-- Puntero láser -->
+                            <circle cx="100" cy="25" r="3" fill="#fff" />
                         </g>
-                        <!-- Centro de la aguja -->
-                        <circle cx="100" cy="100" r="12" fill="#111" stroke="#333" stroke-width="2"/>
-                        <circle cx="100" cy="100" r="4" fill="#fff"/>
+                        <!-- Centro -->
+                        <circle cx="100" cy="100" r="10" fill="#111" stroke="var(--accent)" stroke-width="2"/>
+                        <circle cx="100" cy="100" r="3" fill="var(--accent)"/>
                     </svg>
                     
                     <div class="percentage-display">
-                        <span id="percentage-text">0</span><span class="percent-symbol">%</span>
+                        <span id="percentage-text" class="glow-text">0</span><span class="percent-symbol">%</span>
                     </div>
-                    <p id="result-label" class="result-label">Probabilidad de IA</p>
+                    <div id="result-label" class="result-label">SISTEMA EN ESPERA</div>
                 </div>
 
-                <div class="reasons-container">
-                    <h3>Análisis detallado</h3>
+                <div class="terminal-logs">
+                    <div class="terminal-header">// LOG_DE_DETECCIÓN</div>
                     <ul id="reasons-list"></ul>
                 </div>
             </section>
