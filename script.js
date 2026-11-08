@@ -1,4 +1,7 @@
-import { detectAIText } from './libs/ai-text-detector/index.esm.js';
+import { AITextDetector } from './libs/ai-text-detector/index.esm.js';
+
+// Instanciamos la clase de la librería
+const detector = new AITextDetector();
 
 const textInput = document.getElementById('text-input');
 const analyzeBtn = document.getElementById('analyze-btn');
@@ -10,33 +13,35 @@ const percentageText = document.getElementById('percentage-text');
 const resultLabel = document.getElementById('result-label');
 const reasonsList = document.getElementById('reasons-list');
 
-// Longitud del arco del velocímetro (semi-circunferencia de radio 80)
-// Fórmula: PI * r = 3.1416 * 80 = 251.32
 const ARC_LENGTH = 251.32;
 
 analyzeBtn.addEventListener('click', () => {
     const text = textInput.value.trim();
     
-    // Limpiar UI anterior
     errorMessage.classList.add('hidden');
     resultsSection.classList.add('hidden');
     
-    if (!text) {
-        showError('Por favor, pega un texto para analizar.');
+    if (text.length < 50) {
+        showError('El texto es demasiado corto. Pega al menos 50 caracteres para un análisis fiable.');
         return;
     }
 
-    // Estado de carga
     analyzeBtn.disabled = true;
     analyzeBtn.textContent = 'Analizando...';
 
-    // Usar setTimeout para permitir que la UI se actualice antes del procesamiento pesado
     setTimeout(() => {
         try {
-            const result = detectAIText(text);
-            displayResults(result);
+            // 1. Obtenemos todas las métricas crudas de la librería
+            const metrics = detector.analyzeText(text);
+            
+            // 2. Calculamos nuestra propia probabilidad equilibrada
+            const { probability, reasons } = calculateBalancedProbability(metrics);
+            
+            // 3. Mostramos los resultados
+            displayResults(probability, reasons);
         } catch (error) {
-            showError(error.message || 'Ocurrió un error al analizar el texto.');
+            showError('Ocurrió un error al analizar el texto.');
+            console.error(error);
         } finally {
             analyzeBtn.disabled = false;
             analyzeBtn.textContent = 'Analizar Texto';
@@ -49,65 +54,116 @@ function showError(message) {
     errorMessage.classList.remove('hidden');
 }
 
-function displayResults(result) {
-    // result.confidence es un valor entre 0 y 1 (probabilidad de IA)
-    const probability = Math.round(result.confidence * 100);
+// NUEVA LÓGICA DE PUNTUACIÓN (Ignoramos las listas de palabras rotas de la librería)
+function calculateBalancedProbability(m) {
+    let score = 0; // Empezamos en 0 (0% IA, 100% Humano)
+    const reasons = [];
+
+    // 1. Perplejidad (Perplexity)
+    // La IA tiende a tener perplejidad baja (predecible). Los humanos, alta (impredecible).
+    if (m.perplexity < 15) {
+        score += 0.35;
+        reasons.push("Baja perplejidad: El texto utiliza palabras muy predecibles, típico de la IA.");
+    } else if (m.perplexity < 30) {
+        score += 0.15;
+    } else {
+        reasons.push("Alta perplejidad: Uso de vocabulario impredecible, típico de humanos.");
+    }
+
+    // 2. Burstiness (Variabilidad de las oraciones)
+    // La IA escribe oraciones de longitud muy similar. Los humanos variamos mucho.
+    if (m.burstiness < -0.1) {
+        score += 0.3;
+        reasons.push("Baja variabilidad (Burstiness): Las oraciones tienen longitudes muy uniformes.");
+    } else if (m.burstiness > 0.3) {
+        reasons.push("Alta variabilidad: Mezcla natural de oraciones cortas y largas.");
+    } else {
+        score += 0.1;
+    }
+
+    // 3. Densidad de conectores lógicos
+    // La IA abusa de palabras como "sin embargo", "por lo tanto", "además".
+    if (m.transitionDensity > 2.5) {
+        score += 0.2;
+        reasons.push("Uso excesivo de conectores lógicos (transiciones).");
+    }
+
+    // 4. Variabilidad Emocional
+    // La IA suele ser muy neutra. Los humanos usamos más exclamaciones, signos y emociones.
+    if (m.emotionalToneVariability < 0.1) {
+        score += 0.15;
+        reasons.push("Tono emocional muy plano y objetivo.");
+    } else if (m.emotionalToneVariability > 0.3) {
+        reasons.push("Expresividad emocional natural.");
+    }
+
+    // 5. Repetición de N-gramas (Frases repetidas)
+    if (m.nGramRepetition > 0.15) {
+        score += 0.1;
+        reasons.push("Patrones de repetición de palabras detectados.");
+    }
+
+    // Normalizar entre 0 y 1
+    let finalProb = Math.min(Math.max(score, 0), 1);
     
-    // Mostrar sección de resultados
+    // Si la probabilidad es muy baja, añadir razones humanas positivas
+    if (finalProb < 0.3) {
+        reasons.push("Variación natural en la estructura de las frases.");
+        if (m.lexicalDiversity > 0.7) reasons.push("Vocabulario muy rico y diverso.");
+    }
+
+    return {
+        probability: Math.round(finalProb * 100),
+        reasons: reasons
+    };
+}
+
+function displayResults(probability, reasons) {
     resultsSection.classList.remove('hidden');
 
-    // 1. Animación del número
+    // Animación del número
     animateValue(percentageText, 0, probability, 1000);
 
-    // 2. Actualizar colores y etiquetas basados en el porcentaje
+    // Colores
     let color, label;
     if (probability < 30) {
-        color = 'var(--success)'; // Verde (Humano)
+        color = 'var(--success)'; // Verde
         label = 'Probablemente Humano';
     } else if (probability < 70) {
-        color = 'var(--warning)'; // Amarillo (Incierto)
-        label = 'Contenido Mixto / Incierto';
+        color = 'var(--warning)'; // Amarillo
+        label = 'Contenido Incierto / Mixto';
     } else {
-        color = 'var(--danger)'; // Rojo (IA)
+        color = 'var(--danger)'; // Rojo
         label = 'Probablemente Generado por IA';
     }
 
     resultLabel.textContent = label;
     resultLabel.style.color = color;
 
-    // 3. Animación del arco (Stroke Dashoffset)
-    // A mayor probabilidad de IA, más se llena el arco.
+    // Animación del velocímetro (Arco)
     const offset = ARC_LENGTH - (probability / 100) * ARC_LENGTH;
     gaugeProgress.style.strokeDashoffset = offset;
     gaugeProgress.style.stroke = color;
 
-    // 4. Animación de la aguja (Rotación)
-    // Va de -90 grados (0%) a +90 grados (100%)
+    // Animación de la aguja (Rotación)
     const rotationAngle = -90 + (probability / 100) * 180;
     gaugeNeedle.setAttribute('transform', `rotate(${rotationAngle}, 100, 100)`);
 
-    // 5. Mostrar razones
+    // Lista de razones
     reasonsList.innerHTML = '';
-    if (result.reasons && result.reasons.length > 0) {
-        result.reasons.forEach(reason => {
-            const li = document.createElement('li');
-            li.textContent = reason;
-            reasonsList.appendChild(li);
-        });
-    } else {
+    reasons.forEach(reason => {
         const li = document.createElement('li');
-        li.textContent = 'No se detectaron patrones significativos.';
+        li.textContent = reason;
         reasonsList.appendChild(li);
-    }
+    });
 }
 
-// Función auxiliar para animar el número del porcentaje
+// Función auxiliar para animar el número
 function animateValue(obj, start, end, duration) {
     let startTimestamp = null;
     const step = (timestamp) => {
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        // Easing out cubic
         const easeOutProgress = 1 - Math.pow(1 - progress, 3);
         obj.innerHTML = Math.floor(easeOutProgress * (end - start) + start);
         if (progress < 1) {
